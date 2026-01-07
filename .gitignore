@@ -1,0 +1,76 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environment
+venv/
+env/
+ENV/
+.venv
+
+# Flask
+instance/
+.webassets-cache
+
+# Uploads
+uploads/
+*.png
+*.jpg
+*.jpeg
+*.gif
+
+# Model files - KEEP models/best_model.hdf5 for deployment
+# Ignore model files in data folder but keep models/ folder
+data/**/*.hdf5
+data/**/*.h5
+# Allow models/best_model.hdf5 to be tracked
+!models/
+!models/best_model.hdf5
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment variables
+.env
+.env.local
+
+# Logs
+*.log
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# Dataset - exclude large dataset folders
+data/dataset/
+data/Lung-Cancer-Prediction-using-CNN-and-Transfer-Learning-main/
+data/test_images/
+data/*.png
+data/*.jpg
+data/*.jpeg
+

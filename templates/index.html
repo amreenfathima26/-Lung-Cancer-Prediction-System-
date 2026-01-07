@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lung Cancer Prediction System</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🫁 Lung Cancer Prediction System</h1>
+            <p class="subtitle">AI-Powered Medical Image Classification using Deep Learning</p>
+        </header>
+
+        <main>
+            <div class="upload-section">
+                <div class="upload-box" id="uploadBox">
+                    <div class="upload-icon">
+                        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                            <polyline points="17 8 12 3 7 8"></polyline>
+                            <line x1="12" y1="3" x2="12" y2="15"></line>
+                        </svg>
+                    </div>
+                    <h3>Upload Lung CT Scan Image</h3>
+                    <p>Click to browse or drag and drop</p>
+                    <p class="file-info">Supported formats: PNG, JPG, JPEG (Max 16MB)</p>
+                    <input type="file" id="fileInput" accept="image/png,image/jpeg,image/jpg" hidden>
+                </div>
+                
+                <div class="preview-section" id="previewSection" style="display: none;">
+                    <h3>Uploaded Image Preview</h3>
+                    <div class="image-preview">
+                        <img id="previewImage" src="" alt="Preview">
+                    </div>
+                    <button class="btn btn-primary" id="predictBtn">Analyze Image</button>
+                    <button class="btn btn-secondary" id="changeImageBtn">Change Image</button>
+                </div>
+            </div>
+
+            <div class="results-section" id="resultsSection" style="display: none;">
+                <h2>Prediction Results</h2>
+                <div class="result-card">
+                    <div class="result-header">
+                        <h3 id="predictionLabel">-</h3>
+                        <span class="confidence-badge" id="confidenceBadge">-</span>
+                    </div>
+                    <div class="progress-bar-container">
+                        <div class="progress-bar" id="progressBar"></div>
+                    </div>
+                </div>
+
+                <div class="all-predictions">
+                    <h3>All Class Probabilities</h3>
+                    <div class="prediction-list" id="predictionList"></div>
+                </div>
+            </div>
+
+            <div class="loading" id="loading" style="display: none;">
+                <div class="spinner"></div>
+                <p>Analyzing image...</p>
+            </div>
+
+            <div class="error-message" id="errorMessage" style="display: none;"></div>
+        </main>
+
+        <footer>
+            <div class="info-section">
+                <h3>About This System</h3>
+                <p>This AI-powered system uses Convolutional Neural Networks (CNN) with Transfer Learning to classify lung CT scan images into four categories:</p>
+                <ul>
+                    <li><strong>Normal:</strong> Healthy lung tissue</li>
+                    <li><strong>Adenocarcinoma:</strong> A type of lung cancer</li>
+                    <li><strong>Large Cell Carcinoma:</strong> A type of lung cancer</li>
+                    <li><strong>Squamous Cell Carcinoma:</strong> A type of lung cancer</li>
+                </ul>
+                <p class="disclaimer"><strong>Disclaimer:</strong> This tool is for educational and research purposes only. It should not be used as a substitute for professional medical diagnosis.</p>
+            </div>
+        </footer>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+</body>
+</html>
+

@@ -1,0 +1,172 @@
+import os
+import numpy as np
+from flask import Flask, render_template, request, jsonify
+from werkzeug.utils import secure_filename
+from tensorflow.keras.models import Sequential, load_model
+from tensorflow.keras.layers import GlobalAveragePooling2D, Dense
+from tensorflow.keras.preprocessing import image
+import tensorflow as tf
+
+app = Flask(__name__)
+app.config['UPLOAD_FOLDER'] = 'uploads'
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
+app.config['ALLOWED_EXTENSIONS'] = {'png', 'jpg', 'jpeg', 'gif'}
+
+# Create uploads directory if it doesn't exist
+os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+
+# Global variables for model
+model = None
+IMAGE_SIZE = (350, 350)
+CLASS_LABELS = ['adenocarcinoma_left.lower.lobe_T2_N0_M0_Ib', 
+                'large.cell.carcinoma_left.hilum_T2_N2_M0_IIIa',
+                'normal',
+                'squamous.cell.carcinoma_left.hilum_T1_N2_M0_IIIa']
+
+# Human-readable labels
+CLASS_NAMES = {
+    'adenocarcinoma_left.lower.lobe_T2_N0_M0_Ib': 'Adenocarcinoma',
+    'large.cell.carcinoma_left.hilum_T2_N2_M0_IIIa': 'Large Cell Carcinoma',
+    'normal': 'Normal',
+    'squamous.cell.carcinoma_left.hilum_T1_N2_M0_IIIa': 'Squamous Cell Carcinoma'
+}
+
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in app.config['ALLOWED_EXTENSIONS']
+
+def load_model_weights():
+    """Load the trained model weights"""
+    global model
+    try:
+        # Try to load the saved model file from multiple possible locations
+        possible_paths = [
+            'models/best_model.hdf5',
+            'best_model.hdf5',
+            'data/Lung-Cancer-Prediction-using-CNN-and-Transfer-Learning-main (1)/Lung-Cancer-Prediction-using-CNN-and-Transfer-Learning-main/best_model.hdf5',
+            'Lung-Cancer-Prediction-using-CNN-and-Transfer-Learning-main (1)/Lung-Cancer-Prediction-using-CNN-and-Transfer-Learning-main/best_model.hdf5',
+            'Lung-Cancer-Prediction-using-CNN-and-Transfer-Learning-main/Lung-Cancer-Prediction-using-CNN-and-Transfer-Learning-main/best_model.hdf5'
+        ]
+        
+        model_path = None
+        for path in possible_paths:
+            if os.path.exists(path):
+                model_path = path
+                break
+        
+        if model_path:
+            # Reconstruct the model architecture
+            pretrained_model = tf.keras.applications.Xception(
+                weights='imagenet', 
+                include_top=False, 
+                input_shape=[*IMAGE_SIZE, 3]
+            )
+            pretrained_model.trainable = False
+            
+            model = Sequential()
+            model.add(pretrained_model)
+            model.add(GlobalAveragePooling2D())
+            model.add(Dense(4, activation='softmax'))
+            
+            # Load weights
+            model.load_weights(model_path)
+            model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
+            print("Model loaded successfully!")
+            return True
+        else:
+            print("Model file not found. Checked paths:")
+            for path in possible_paths:
+                print(f"  - {path}")
+            return False
+    except Exception as e:
+        print(f"Error loading model: {str(e)}")
+        return False
+
+def preprocess_image(img_path):
+    """Load and preprocess image for prediction"""
+    try:
+        img = image.load_img(img_path, target_size=IMAGE_SIZE)
+        img_array = image.img_to_array(img)
+        img_array = np.expand_dims(img_array, axis=0)
+        img_array /= 255.0  # Rescale the image
+        return img_array
+    except Exception as e:
+        print(f"Error preprocessing image: {str(e)}")
+        return None
+
+@app.route('/')
+def index():
+    return render_template('index.html')
+
+@app.route('/predict', methods=['POST'])
+def predict():
+    if 'file' not in request.files:
+        return jsonify({'error': 'No file provided'}), 400
+    
+    file = request.files['file']
+    
+    if file.filename == '':
+        return jsonify({'error': 'No file selected'}), 400
+    
+    if not allowed_file(file.filename):
+        return jsonify({'error': 'Invalid file type. Please upload PNG, JPG, or JPEG'}), 400
+    
+    if model is None:
+        return jsonify({'error': 'Model not loaded. Please ensure best_model.hdf5 exists.'}), 500
+    
+    try:
+        # Save uploaded file
+        filename = secure_filename(file.filename)
+        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        file.save(filepath)
+        
+        # Preprocess image
+        img_array = preprocess_image(filepath)
+        if img_array is None:
+            return jsonify({'error': 'Error processing image'}), 500
+        
+        # Make prediction
+        predictions = model.predict(img_array, verbose=0)
+        predicted_class_idx = np.argmax(predictions[0])
+        confidence = float(predictions[0][predicted_class_idx] * 100)
+        
+        predicted_class = CLASS_LABELS[predicted_class_idx]
+        predicted_name = CLASS_NAMES.get(predicted_class, predicted_class)
+        
+        # Get all class probabilities
+        all_predictions = {}
+        for i, label in enumerate(CLASS_LABELS):
+            class_name = CLASS_NAMES.get(label, label)
+            all_predictions[class_name] = float(predictions[0][i] * 100)
+        
+        # Clean up uploaded file
+        os.remove(filepath)
+        
+        return jsonify({
+            'success': True,
+            'prediction': predicted_name,
+            'confidence': round(confidence, 2),
+            'all_predictions': all_predictions
+        })
+    
+    except Exception as e:
+        if os.path.exists(filepath):
+            os.remove(filepath)
+        return jsonify({'error': f'Prediction error: {str(e)}'}), 500
+
+@app.route('/health')
+def health():
+    return jsonify({
+        'status': 'healthy',
+        'model_loaded': model is not None
+    })
+
+if __name__ == '__main__':
+    print("Loading model...")
+    if not load_model_weights():
+        print("WARNING: Model failed to load. The application may not work correctly.")
+        print("Please ensure best_model.hdf5 exists in the models/ folder.")
+    print("Starting Flask application...")
+    # Use environment variable for port (required for deployment platforms)
+    port = int(os.environ.get('PORT', 5000))
+    app.run(debug=False, host='0.0.0.0', port=port)
+
