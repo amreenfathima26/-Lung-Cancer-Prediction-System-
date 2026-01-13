@@ -45,22 +45,22 @@ uploadBox.addEventListener('drop', (e) => {
 
 function handleFileSelect(file) {
     if (!file) return;
-    
+
     // Validate file type
     const validTypes = ['image/png', 'image/jpeg', 'image/jpg'];
     if (!validTypes.includes(file.type)) {
         showError('Please upload a valid image file (PNG, JPG, or JPEG)');
         return;
     }
-    
+
     // Validate file size (16MB)
     if (file.size > 16 * 1024 * 1024) {
         showError('File size exceeds 16MB limit');
         return;
     }
-    
+
     selectedFile = file;
-    
+
     // Show preview
     const reader = new FileReader();
     reader.onload = (e) => {
@@ -101,36 +101,50 @@ predictBtn.addEventListener('click', async () => {
         showError('Please select an image first');
         return;
     }
-    
+
     // Show loading
     loading.style.display = 'block';
     previewSection.style.display = 'none';
     resultsSection.style.display = 'none';
     hideError();
-    
+
     // Create form data
     const formData = new FormData();
     formData.append('file', selectedFile);
-    
+
     try {
         const response = await fetch('/predict', {
             method: 'POST',
             body: formData
         });
-        
-        const data = await response.json();
-        
-        loading.style.display = 'none';
-        
-        if (data.error) {
-            showError(data.error);
-            previewSection.style.display = 'block';
-        } else if (data.success) {
-            displayResults(data);
+
+        const contentType = response.headers.get("content-type");
+        if (contentType && contentType.indexOf("application/json") !== -1) {
+            const data = await response.json();
+
+            loading.style.display = 'none';
+
+            if (data.error) {
+                showError(data.error);
+                previewSection.style.display = 'block';
+            } else if (data.success) {
+                displayResults(data);
+            } else {
+                showError('An unexpected error occurred');
+                previewSection.style.display = 'block';
+            }
         } else {
-            showError('An unexpected error occurred');
+            // Handle non-JSON response (likely HTML error page)
+            const text = await response.text();
+            loading.style.display = 'none';
+            console.error("Server returned non-JSON:", text);
+            // Extract title if present
+            const match = text.match(/<title>(.*?)<\/title>/i);
+            const title = match ? match[1] : "Server Error";
+            showError(`Server Error: ${title}. Check console for details.`);
             previewSection.style.display = 'block';
         }
+
     } catch (error) {
         loading.style.display = 'none';
         showError('Network error: ' + error.message);
@@ -142,39 +156,39 @@ function displayResults(data) {
     // Update main prediction
     predictionLabel.textContent = data.prediction;
     confidenceBadge.textContent = `${data.confidence}%`;
-    
+
     // Update progress bar
     progressBar.style.width = `${data.confidence}%`;
     progressBar.textContent = `${data.confidence}%`;
-    
+
     // Update all predictions
     predictionList.innerHTML = '';
-    
+
     // Sort predictions by confidence
     const sortedPredictions = Object.entries(data.all_predictions)
         .sort((a, b) => b[1] - a[1]);
-    
+
     sortedPredictions.forEach(([label, percentage]) => {
         const item = document.createElement('div');
         item.className = 'prediction-item';
-        
+
         const labelSpan = document.createElement('span');
         labelSpan.className = 'label';
         labelSpan.textContent = label;
-        
+
         const percentageSpan = document.createElement('span');
         percentageSpan.className = 'percentage';
         percentageSpan.textContent = `${percentage.toFixed(2)}%`;
-        
+
         item.appendChild(labelSpan);
         item.appendChild(percentageSpan);
         predictionList.appendChild(item);
     });
-    
+
     // Show results
     resultsSection.style.display = 'block';
     previewSection.style.display = 'block';
-    
+
     // Scroll to results
     resultsSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }

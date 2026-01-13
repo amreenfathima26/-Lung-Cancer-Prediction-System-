@@ -6,6 +6,7 @@ from tensorflow.keras.models import Sequential, load_model
 from tensorflow.keras.layers import GlobalAveragePooling2D, Dense
 from tensorflow.keras.preprocessing import image
 import tensorflow as tf
+import gc
 
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = 'uploads'
@@ -146,6 +147,7 @@ def health():
 # Load model at module level so it works with Gunicorn
 print("Loading model...")
 load_model_weights()
+gc.collect()
 
 if __name__ == '__main__':
     print("Starting Flask application...")
