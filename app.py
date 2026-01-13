@@ -93,7 +93,35 @@ def load_model_weights():
         print(f"Error loading model: {str(e)}")
         return False
 
-# ... inside predict ...
+def preprocess_image(img_path):
+    """Load and preprocess image for prediction"""
+    try:
+        img = image.load_img(img_path, target_size=IMAGE_SIZE)
+        img_array = image.img_to_array(img)
+        img_array = np.expand_dims(img_array, axis=0)
+        img_array /= 255.0  # Rescale the image
+        return img_array
+    except Exception as e:
+        print(f"Error preprocessing image: {str(e)}")
+        return None
+
+@app.route('/')
+def index():
+    return render_template('index.html')
+
+@app.route('/predict', methods=['POST'])
+def predict():
+    if 'file' not in request.files:
+        return jsonify({'error': 'No file provided'}), 400
+    
+    file = request.files['file']
+    
+    if file.filename == '':
+        return jsonify({'error': 'No file selected'}), 400
+    
+    if not allowed_file(file.filename):
+        return jsonify({'error': 'Invalid file type. Please upload PNG, JPG, or JPEG'}), 400
+    
     if model is None:
         return jsonify({'error': f'Model load failed: {load_error}'}), 500
     
@@ -133,7 +161,7 @@ def load_model_weights():
         })
     
     except Exception as e:
-        if os.path.exists(filepath):
+        if 'filepath' in locals() and os.path.exists(filepath):
             os.remove(filepath)
         return jsonify({'error': f'Prediction error: {str(e)}'}), 500
 
