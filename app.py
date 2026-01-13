@@ -34,10 +34,21 @@ CLASS_NAMES = {
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in app.config['ALLOWED_EXTENSIONS']
 
+# Global variable for error tracking
+load_error = "Model initialization not attempted"
+
 def load_model_weights():
     """Load the trained model weights"""
-    global model
+    global model, load_error
     try:
+        # Debug info
+        import os
+        cwd = os.getcwd()
+        files = []
+        for root, dirs, filenames in os.walk('.'):
+            for filename in filenames:
+                files.append(os.path.join(root, filename))
+        
         # Try to load the saved model file from multiple possible locations
         possible_paths = [
             'models/best_model.hdf5',
@@ -73,45 +84,17 @@ def load_model_weights():
             print("Model loaded successfully!")
             return True
         else:
-            print("Model file not found. Checked paths:")
-            for path in possible_paths:
-                print(f"  - {path}")
+            load_error = f"File not found. CWD: {cwd}. Files found: {files[:20]}..."
+            print(f"Model file not found. Checked paths: {possible_paths}")
             return False
     except Exception as e:
+        load_error = f"Exception loading model: {str(e)}"
         print(f"Error loading model: {str(e)}")
         return False
 
-def preprocess_image(img_path):
-    """Load and preprocess image for prediction"""
-    try:
-        img = image.load_img(img_path, target_size=IMAGE_SIZE)
-        img_array = image.img_to_array(img)
-        img_array = np.expand_dims(img_array, axis=0)
-        img_array /= 255.0  # Rescale the image
-        return img_array
-    except Exception as e:
-        print(f"Error preprocessing image: {str(e)}")
-        return None
-
-@app.route('/')
-def index():
-    return render_template('index.html')
-
-@app.route('/predict', methods=['POST'])
-def predict():
-    if 'file' not in request.files:
-        return jsonify({'error': 'No file provided'}), 400
-    
-    file = request.files['file']
-    
-    if file.filename == '':
-        return jsonify({'error': 'No file selected'}), 400
-    
-    if not allowed_file(file.filename):
-        return jsonify({'error': 'Invalid file type. Please upload PNG, JPG, or JPEG'}), 400
-    
+# ... inside predict ...
     if model is None:
-        return jsonify({'error': 'Model not loaded. Please ensure best_model.hdf5 exists.'}), 500
+        return jsonify({'error': f'Model load failed: {load_error}'}), 500
     
     try:
         # Save uploaded file
