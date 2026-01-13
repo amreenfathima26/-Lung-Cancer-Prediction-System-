@@ -1,4 +1,0 @@
-# Git LFS tracking for large model files
-models/*.hdf5 filter=lfs diff=lfs merge=lfs -text
-models/*.h5 filter=lfs diff=lfs merge=lfs -text
-
