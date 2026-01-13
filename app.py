@@ -143,11 +143,11 @@ def health():
         'model_loaded': model is not None
     })
 
+# Load model at module level so it works with Gunicorn
+print("Loading model...")
+load_model_weights()
+
 if __name__ == '__main__':
-    print("Loading model...")
-    if not load_model_weights():
-        print("WARNING: Model failed to load. The application may not work correctly.")
-        print("Please ensure best_model.hdf5 exists in the models/ folder.")
     print("Starting Flask application...")
     # Use environment variable for port (required for deployment platforms)
     port = int(os.environ.get('PORT', 5000))
